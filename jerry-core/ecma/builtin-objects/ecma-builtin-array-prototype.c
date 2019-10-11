@@ -771,9 +771,44 @@ ecma_builtin_array_prototype_object_slice (ecma_value_t arg1, /**< start */
 
   ecma_object_t *new_array_p = ecma_get_object_from_value (new_array);
 
+  if (ecma_get_object_type (obj_p) == ECMA_OBJECT_TYPE_ARRAY
+      && ((ecma_extended_object_t *) obj_p)->u.array.is_fast_mode)
+  {
+    if (start >= end)
+    {
+      return new_array;
+    }
+
+    uint32_t length = end - start;
+    ecma_value_t *buffer_p = ecma_fast_array_extend (new_array_p, length);
+    ecma_object_t *original_obj_p = obj_p;
+
+    uint32_t old_index = start;
+    for (uint32_t new_index = 0; old_index < end; old_index++, new_index++)
+    {
+      ecma_value_t get_value = ecma_fast_array_get (&obj_p, old_index);
+
+      if (JERRY_UNLIKELY (obj_p == NULL))
+      {
+        start = old_index;
+        obj_p = original_obj_p;
+        if (ECMA_IS_VALUE_ERROR (get_value))
+        {
+          ecma_deref_object (new_array_p);
+          return get_value;
+        }
+        goto slow_case;
+      }
+      buffer_p[new_index] = ecma_copy_value_if_not_object (get_value);
+    }
+
+    return new_array;
+  }
+
   /* 9. */
   uint32_t n = 0;
 
+slow_case:
   /* 10. */
   for (uint32_t k = start; k < end; k++, n++)
   {
