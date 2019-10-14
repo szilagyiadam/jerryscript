@@ -885,6 +885,16 @@ typedef struct
 #define ECMA_FAST_ARRAY_ALIGN_LENGTH(length) \
   (uint32_t) ((((length)) + ECMA_FAST_ARRAY_ALIGNMENT - 1) / ECMA_FAST_ARRAY_ALIGNMENT * ECMA_FAST_ARRAY_ALIGNMENT)
 
+/**
+ * 
+ */ 
+typedef enum
+{
+  ECMA_FAST_ARRAY_GET_NO_OPTS = 0,
+  ECMA_FAST_ARRAY_GET_CONVERTED = (1 << 1),
+  ECMA_FAST_ARRAY_GET_ERROR = (1 << 2),
+} ecma_fast_array_get_flags_t;
+
 
 /**
  * Compiled byte code data.

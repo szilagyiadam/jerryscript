@@ -757,6 +757,8 @@ ecma_builtin_array_prototype_object_slice (ecma_value_t arg1, /**< start */
 
   JERRY_ASSERT (start <= len && end <= len);
 
+  uint32_t k = start, n = 0;
+
 #if ENABLED (JERRY_ES2015_CLASS)
   ecma_value_t new_array = ecma_op_create_array_object_by_constructor (NULL, 0, false, obj_p);
 
@@ -781,36 +783,33 @@ ecma_builtin_array_prototype_object_slice (ecma_value_t arg1, /**< start */
 
     uint32_t length = end - start;
     ecma_value_t *buffer_p = ecma_fast_array_extend (new_array_p, length);
-    ecma_object_t *original_obj_p = obj_p;
+    uint8_t flags = ECMA_FAST_ARRAY_GET_NO_OPTS;
 
-    uint32_t old_index = start;
-    for (uint32_t new_index = 0; old_index < end; old_index++, new_index++)
+    for (; k < end; k++, n++)
     {
-      ecma_value_t get_value = ecma_fast_array_get (&obj_p, old_index);
-
-      if (JERRY_UNLIKELY (obj_p == NULL))
+      if (flags & ECMA_FAST_ARRAY_GET_CONVERTED)
       {
-        start = old_index;
-        obj_p = original_obj_p;
-        if (ECMA_IS_VALUE_ERROR (get_value))
-        {
-          ecma_deref_object (new_array_p);
-          return get_value;
-        }
         goto slow_case;
       }
-      buffer_p[new_index] = ecma_copy_value_if_not_object (get_value);
+
+      ecma_value_t get_value = ecma_fast_array_get (obj_p, k, &flags);
+
+      if (JERRY_UNLIKELY (flags & ECMA_FAST_ARRAY_GET_ERROR))
+      {
+        ecma_deref_object (new_array_p);
+        return get_value;
+      }
+
+      JERRY_ASSERT (!ECMA_IS_VALUE_ERROR (get_value));
+      buffer_p[n] = get_value;
     }
 
     return new_array;
   }
 
-  /* 9. */
-  uint32_t n = 0;
-
 slow_case:
   /* 10. */
-  for (uint32_t k = start; k < end; k++, n++)
+  for (; k < end; k++, n++)
   {
     /* 10.c */
     ecma_value_t get_value = ecma_op_object_find_by_uint32_index (obj_p, k);

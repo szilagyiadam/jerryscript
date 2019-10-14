@@ -56,7 +56,7 @@ ecma_value_t *
 ecma_fast_array_extend (ecma_object_t *object_p, uint32_t new_lengt);
 
 ecma_value_t
-ecma_fast_array_get (ecma_object_t **object_p, uint32_t index);
+ecma_fast_array_get (ecma_object_t *object_p, uint32_t index, uint8_t *flags);
 
 bool
 ecma_fast_array_set_property (ecma_object_t *object_p, ecma_string_t *property_name_p, ecma_value_t value);

@@ -339,42 +339,49 @@ ecma_fast_array_extend (ecma_object_t *object_p, /**< fast access mode array obj
  * @return pointer to the extended underlying buffer
  */
 ecma_value_t
-ecma_fast_array_get (ecma_object_t **object_p, /**< fast access mode array object */
-                     uint32_t index) /**< new length of the fast access mode array */
+ecma_fast_array_get (ecma_object_t *object_p, /**< fast access mode array object */
+                     uint32_t index, /**< new length of the fast access mode array */
+                     uint8_t *flags) /**< [out] flags */
 {
-  ecma_object_t *fast_array_obj_p = *object_p;
-  JERRY_ASSERT (ecma_get_object_type (fast_array_obj_p) == ECMA_OBJECT_TYPE_ARRAY);
-  ecma_extended_object_t *ext_obj_p = (ecma_extended_object_t *) fast_array_obj_p;
+  JERRY_ASSERT (ecma_get_object_type (object_p) == ECMA_OBJECT_TYPE_ARRAY);
+  ecma_extended_object_t *ext_obj_p = (ecma_extended_object_t *) object_p;
   uint32_t length = ext_obj_p->u.array.length;
 
   JERRY_ASSERT (ext_obj_p->u.array.is_fast_mode);
-  JERRY_ASSERT (fast_array_obj_p->u1.property_list_cp != JMEM_CP_NULL);
+  JERRY_ASSERT (object_p->u1.property_list_cp != JMEM_CP_NULL);
   JERRY_ASSERT (index < length);
 
-  ecma_value_t *values_p = ECMA_GET_NON_NULL_POINTER (ecma_value_t, fast_array_obj_p->u1.property_list_cp);
+  ecma_value_t *values_p = ECMA_GET_NON_NULL_POINTER (ecma_value_t, object_p->u1.property_list_cp);
 
   if (!ecma_is_value_array_hole (values_p[index]))
   {
-    return values_p[index];
+    return ecma_copy_value_if_not_object (values_p[index]);
   }
 
-  if (fast_array_obj_p->u2.prototype_cp == JMEM_CP_NULL)
+  if (object_p->u2.prototype_cp == JMEM_CP_NULL)
   {
     return ECMA_VALUE_ARRAY_HOLE;
   }
 
-  ecma_object_t *proto_p = ECMA_GET_NON_NULL_POINTER (ecma_object_t, fast_array_obj_p->u2.prototype_cp);
+  ecma_object_t *proto_p = ECMA_GET_NON_NULL_POINTER (ecma_object_t, object_p->u2.prototype_cp);
 
   ecma_value_t get_value = ecma_op_object_find_by_uint32_index (proto_p, index);
 
-  if (ext_obj_p->u.array.is_fast_mode)
+  if (!ext_obj_p->u.array.is_fast_mode)
   {
-    return ecma_is_value_found (get_value) ? get_value : ECMA_VALUE_ARRAY_HOLE;
+    *flags |= ECMA_FAST_ARRAY_GET_CONVERTED;
   }
 
-  *object_p = NULL;
+  if (ecma_is_value_found (get_value))
+  {
+    if (ECMA_IS_VALUE_ERROR (get_value))
+    {
+      *flags |= ECMA_FAST_ARRAY_GET_ERROR;
+    }
+    return get_value;
+  }
 
-  return get_value;
+  return ECMA_VALUE_ARRAY_HOLE;
 } /* ecma_fast_array_get */
 
 /**
