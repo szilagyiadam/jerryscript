@@ -106,6 +106,16 @@ ecma_op_new_fast_array_object (ecma_length_t length) /**< length of the new fast
 } /* ecma_op_new_fast_array_object */
 
 /**
+ * Converts a fast access mode array back to a normal property list based array
+ */
+inline bool JERRY_ATTR_ALWAYS_INLINE
+ecma_object_is_fast_array (ecma_object_t *obj_p) /**< ecma-object */
+{
+  return (ecma_get_object_type (obj_p) == ECMA_OBJECT_TYPE_ARRAY
+          && ((ecma_extended_object_t *) obj_p)->u.array.is_fast_mode);
+} /* ecma_object_is_fast_array */
+
+/**
  * Property name type flag for array indices.
  */
 #define ECMA_FAST_ARRAY_UINT32_DIRECT_STRING_PROP_TYPE 0x80
@@ -336,12 +346,11 @@ ecma_fast_array_extend (ecma_object_t *object_p, /**< fast access mode array obj
 /**
  * Extend the underlying buffer of a fast mode access array for the given new length
  *
- * @return pointer to the extended underlying buffer
+ * @return ecma_value_t
  */
 ecma_value_t
 ecma_fast_array_get (ecma_object_t *object_p, /**< fast access mode array object */
-                     uint32_t index, /**< new length of the fast access mode array */
-                     uint8_t *flags) /**< [out] flags */
+                     uint32_t index) /**< new length of the fast access mode array */
 {
   JERRY_ASSERT (ecma_get_object_type (object_p) == ECMA_OBJECT_TYPE_ARRAY);
   ecma_extended_object_t *ext_obj_p = (ecma_extended_object_t *) object_p;
@@ -367,21 +376,12 @@ ecma_fast_array_get (ecma_object_t *object_p, /**< fast access mode array object
 
   ecma_value_t get_value = ecma_op_object_find_by_uint32_index (proto_p, index);
 
-  if (!ext_obj_p->u.array.is_fast_mode)
+  if (ecma_is_value_object (get_value))
   {
-    *flags |= ECMA_FAST_ARRAY_GET_CONVERTED;
+    ecma_deref_object (ecma_get_object_from_value (get_value));
   }
 
-  if (ecma_is_value_found (get_value))
-  {
-    if (ECMA_IS_VALUE_ERROR (get_value))
-    {
-      *flags |= ECMA_FAST_ARRAY_GET_ERROR;
-    }
-    return get_value;
-  }
-
-  return ECMA_VALUE_ARRAY_HOLE;
+  return ecma_is_value_found (get_value) ? get_value : ECMA_VALUE_ARRAY_HOLE;
 } /* ecma_fast_array_get */
 
 /**

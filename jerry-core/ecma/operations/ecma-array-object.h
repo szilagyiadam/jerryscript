@@ -52,11 +52,14 @@ ecma_op_new_array_object (ecma_length_t length);
 ecma_object_t *
 ecma_op_new_fast_array_object (ecma_length_t length);
 
+bool
+ecma_object_is_fast_array (ecma_object_t *obj_p);
+
 ecma_value_t *
 ecma_fast_array_extend (ecma_object_t *object_p, uint32_t new_lengt);
 
 ecma_value_t
-ecma_fast_array_get (ecma_object_t *object_p, uint32_t index, uint8_t *flags);
+ecma_fast_array_get (ecma_object_t *object_p, uint32_t index);
 
 bool
 ecma_fast_array_set_property (ecma_object_t *object_p, ecma_string_t *property_name_p, ecma_value_t value);

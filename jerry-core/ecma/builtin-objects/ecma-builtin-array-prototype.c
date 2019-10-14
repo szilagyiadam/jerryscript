@@ -773,8 +773,7 @@ ecma_builtin_array_prototype_object_slice (ecma_value_t arg1, /**< start */
 
   ecma_object_t *new_array_p = ecma_get_object_from_value (new_array);
 
-  if (ecma_get_object_type (obj_p) == ECMA_OBJECT_TYPE_ARRAY
-      && ((ecma_extended_object_t *) obj_p)->u.array.is_fast_mode)
+  if (ecma_object_is_fast_array (obj_p))
   {
     if (start >= end)
     {
@@ -783,25 +782,26 @@ ecma_builtin_array_prototype_object_slice (ecma_value_t arg1, /**< start */
 
     uint32_t length = end - start;
     ecma_value_t *buffer_p = ecma_fast_array_extend (new_array_p, length);
-    uint8_t flags = ECMA_FAST_ARRAY_GET_NO_OPTS;
+    ecma_extended_object_t *ext_obj_p = (ecma_extended_object_t *) obj_p;
 
-    for (; k < end; k++, n++)
+    while (k < end)
     {
-      if (flags & ECMA_FAST_ARRAY_GET_CONVERTED)
-      {
-        goto slow_case;
-      }
+      ecma_value_t get_value = ecma_fast_array_get (obj_p, k);
 
-      ecma_value_t get_value = ecma_fast_array_get (obj_p, k, &flags);
-
-      if (JERRY_UNLIKELY (flags & ECMA_FAST_ARRAY_GET_ERROR))
+      if (ECMA_IS_VALUE_ERROR (get_value))
       {
         ecma_deref_object (new_array_p);
         return get_value;
       }
 
-      JERRY_ASSERT (!ECMA_IS_VALUE_ERROR (get_value));
       buffer_p[n] = get_value;
+      k++;
+      n++;
+
+      if (ext_obj_p->u.array.is_fast_mode)
+      {
+        goto slow_case;
+      }
     }
 
     return new_array;
@@ -809,7 +809,7 @@ ecma_builtin_array_prototype_object_slice (ecma_value_t arg1, /**< start */
 
 slow_case:
   /* 10. */
-  for (; k < end; k++, n++)
+  while (k < end)
   {
     /* 10.c */
     ecma_value_t get_value = ecma_op_object_find_by_uint32_index (obj_p, k);
@@ -830,6 +830,9 @@ slow_case:
       JERRY_ASSERT (ecma_is_value_true (put_comp));
       ecma_free_value (get_value);
     }
+
+    k++;
+    n++;
   }
 
   return new_array;
