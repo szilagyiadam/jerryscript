@@ -2312,10 +2312,10 @@ ecma_builtin_array_iterators_helper (ecma_object_t *obj_p, /**< array object */
  *         Returned value must be freed with ecma_free_value.
  */
 static ecma_value_t
-ecma_builtin_array_copy_within (const ecma_value_t args[], /**< arguments list */
-                                ecma_length_t args_number, /**< number of arguments */
-                                ecma_object_t *obj_p, /**< array object */
-                                uint32_t len) /**< array object's length */
+ecma_builtin_array_prototype_object_copy_within (const ecma_value_t args[], /**< arguments list */
+                                                 ecma_length_t args_number, /**< number of arguments */
+                                                 ecma_object_t *obj_p, /**< array object */
+                                                 uint32_t len) /**< array object's length */
 {
   if (len == 0)
   {
@@ -2326,6 +2326,7 @@ ecma_builtin_array_copy_within (const ecma_value_t args[], /**< arguments list *
   {
     return ecma_copy_value (ecma_make_object_value (obj_p));
   }
+
 
   ecma_number_t d_len = (double) len;
   ecma_number_t target;
@@ -2373,6 +2374,22 @@ ecma_builtin_array_copy_within (const ecma_value_t args[], /**< arguments list *
   ecma_free_value (error);
 
   ecma_number_t count = JERRY_MIN (end - start, d_len - target);
+
+  if (ecma_op_object_is_fast_array (obj_p))
+  {
+    ecma_extended_object_t *ext_obj_p = (ecma_extended_object_t *) obj_p;
+
+    if (ext_obj_p->u.array.u.hole_count < ECMA_FAST_ARRAY_HOLE_ONE
+        && target < len
+        && start < end
+        && end != 0)
+    {
+      ecma_value_t *buffer_p = ECMA_GET_NON_NULL_POINTER (ecma_value_t, obj_p->u1.property_list_cp);
+      memmove (buffer_p + (uint32_t) target, buffer_p + (uint32_t) start, sizeof (ecma_value_t) * (uint32_t) count);
+      return ecma_copy_value (ecma_make_object_value (obj_p));
+    }
+  }
+
   bool forward = true;
 
   if (start < target && target < start + count)
@@ -2417,7 +2434,7 @@ ecma_builtin_array_copy_within (const ecma_value_t args[], /**< arguments list *
   }
 
   return ecma_copy_value (ecma_make_object_value (obj_p));
-} /* ecma_builtin_array_copy_within */
+} /* ecma_builtin_array_prototype_object_copy_within */
 
 /**
  * Dispatcher of the built-in's routines
@@ -2617,10 +2634,10 @@ ecma_builtin_array_prototype_dispatch_routine (uint16_t builtin_routine_id, /**<
     }
     case ECMA_ARRAY_PROTOTYPE_COPY_WITHIN:
     {
-      ret_value = ecma_builtin_array_copy_within (arguments_list_p,
-                                                  arguments_number,
-                                                  obj_p,
-                                                  length);
+      ret_value = ecma_builtin_array_prototype_object_copy_within (arguments_list_p,
+                                                                   arguments_number,
+                                                                   obj_p,
+                                                                   length);
       break;
     }
 #if ENABLED (JERRY_ES2015_BUILTIN)
