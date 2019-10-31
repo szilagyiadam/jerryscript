@@ -77,6 +77,7 @@ enum
   ECMA_ARRAY_PROTOTYPE_KEYS,
   ECMA_ARRAY_PROTOTYPE_SYMBOL_ITERATOR,
   ECMA_ARRAY_PROTOTYPE_FILL,
+  ECMA_ARRAY_PROTOTYPE_COPY_WITHIN,
 };
 
 #define BUILTIN_INC_HEADER_NAME "ecma-builtin-array-prototype.inc.h"
@@ -2302,6 +2303,123 @@ ecma_builtin_array_iterators_helper (ecma_object_t *obj_p, /**< array object */
 #endif /* ENABLED (JERRY_ES2015_BUILTIN_ITERATOR) */
 
 /**
+ * The Array.prototype object's 'copyWithin' routine
+ *
+ * See also:
+ *          ECMA-262 v6, 22.1.3.3
+ *
+ * @return ecma value
+ *         Returned value must be freed with ecma_free_value.
+ */
+static ecma_value_t
+ecma_builtin_array_copy_within (const ecma_value_t args[], /**< arguments list */
+                                ecma_length_t args_number, /**< number of arguments */
+                                ecma_object_t *obj_p, /**< array object */
+                                uint32_t len) /**< array object's length */
+{
+  if (len == 0)
+  {
+    return ecma_make_integer_value (-1);
+  }
+
+  if (args_number == 0)
+  {
+    return ecma_copy_value (ecma_make_object_value (obj_p));
+  }
+
+  ecma_number_t d_len = (double) len;
+  ecma_number_t target;
+  ecma_value_t error = ecma_op_to_integer (args[0], &target);
+
+  if (ECMA_IS_VALUE_ERROR (error))
+  {
+    return error;
+  }
+
+  target = ecma_number_is_negative (target) ? JERRY_MAX (d_len + target, 0) : JERRY_MIN (target, d_len);
+
+  ecma_number_t start = 0;
+  ecma_number_t end = d_len;
+
+  if (args_number > 1)
+  {
+    error = ecma_op_to_integer (args[1], &start);
+    if (ECMA_IS_VALUE_ERROR (error))
+    {
+      return error;
+    }
+
+    start = ecma_number_is_negative (start) ? JERRY_MAX (d_len + start, 0) : JERRY_MIN (start, d_len);
+
+    if (args_number > 2)
+    {
+      if (ecma_is_value_undefined (args[2]))
+      {
+        end = d_len;
+      }
+      else
+      {
+        error = ecma_op_to_integer (args[2], &end);
+        if (ECMA_IS_VALUE_ERROR (error))
+        {
+          return error;
+        }
+
+        end = ecma_number_is_negative (end) ? JERRY_MAX (d_len + end, 0) : JERRY_MIN (end, d_len);
+      }
+    }
+  }
+
+  ecma_free_value (error);
+
+  ecma_number_t count = JERRY_MIN (end - start, d_len - target);
+  bool forward = true;
+
+  if (start < target && target < start + count)
+  {
+    start = start + count - 1;
+    target = target + count - 1;
+    forward = false;
+  }
+
+  while (count > 0)
+  {
+    ecma_value_t get_value = ecma_op_object_find_by_number_index (obj_p, start);
+
+    if (ECMA_IS_VALUE_ERROR (get_value))
+    {
+      return get_value;
+    }
+
+    ecma_value_t op_value;
+
+    if (ecma_is_value_found (get_value))
+    {
+      op_value = ecma_op_object_put_by_number_index (obj_p, target, get_value, true);
+    }
+    else
+    {
+      op_value = ecma_op_object_delete_by_number_index (obj_p, target, true);
+    }
+
+    ecma_free_value (get_value);
+
+    if (ECMA_IS_VALUE_ERROR (op_value))
+    {
+      return op_value;
+    }
+
+    ecma_free_value (op_value);
+
+    forward ? start++ : start--;
+    forward ? target++ : target--;
+    count--;
+  }
+
+  return ecma_copy_value (ecma_make_object_value (obj_p));
+} /* ecma_builtin_array_copy_within */
+
+/**
  * Dispatcher of the built-in's routines
  *
  * @return ecma value
@@ -2493,6 +2611,14 @@ ecma_builtin_array_prototype_dispatch_routine (uint16_t builtin_routine_id, /**<
                                                   routine_arg_2,
                                                   arguments_number,
                                                   builtin_routine_id == ECMA_ARRAY_PROTOTYPE_REDUCE,
+                                                  obj_p,
+                                                  length);
+      break;
+    }
+    case ECMA_ARRAY_PROTOTYPE_COPY_WITHIN:
+    {
+      ret_value = ecma_builtin_array_copy_within (arguments_list_p,
+                                                  arguments_number,
                                                   obj_p,
                                                   length);
       break;
