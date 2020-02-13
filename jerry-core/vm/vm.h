@@ -163,12 +163,6 @@ typedef enum
   VM_OC_JUMP,                    /**< jump */
   VM_OC_BRANCH_IF_STRICT_EQUAL,  /**< branch if stric equal */
 
-  /* These four opcodes must be in this order. */
-  VM_OC_BRANCH_IF_TRUE,          /**< branch if true */
-  VM_OC_BRANCH_IF_FALSE,         /**< branch if false */
-  VM_OC_BRANCH_IF_LOGICAL_TRUE,  /**< branch if logical true */
-  VM_OC_BRANCH_IF_LOGICAL_FALSE, /**< branch if logical false */
-
   VM_OC_PLUS,                    /**< unary plus */
   VM_OC_MINUS,                   /**< unary minus */
   VM_OC_NOT,                     /**< not */
@@ -263,6 +257,12 @@ typedef enum
   VM_OC_PUSH_NEW_TARGET,         /**< push new.target onto the stack */
 #endif /* ENABLED (JERRY_ES2015) */
   VM_OC_NONE,                    /**< a special opcode for unsupported byte codes */
+
+  /* These four opcodes must be in this order. */
+  VM_OC_BRANCH_IF_TRUE,          /**< branch if true */
+  VM_OC_BRANCH_IF_FALSE,         /**< branch if false */
+  VM_OC_BRANCH_IF_LOGICAL_TRUE,  /**< branch if logical true */
+  VM_OC_BRANCH_IF_LOGICAL_FALSE, /**< branch if logical false */
 } vm_oc_types;
 
 /**
