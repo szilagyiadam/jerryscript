@@ -27,6 +27,7 @@
 #include "ecma-try-catch-macro.h"
 #include "jrt.h"
 #include "jrt-libc-includes.h"
+#include "lit-char-helpers.h"
 
 #if ENABLED (JERRY_BUILTIN_NUMBER)
 
